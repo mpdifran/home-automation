@@ -1,0 +1,10 @@
+{
+	"m_title":"Door Lock User",
+	"m_descr":"This app allows to dynamically assign user codes to people.",
+	"l_options":"Select a door lock",
+        "l_widgets":"Create one or more User/Code widgets",
+	"h_widgets":"Click to create a User/Code widget",
+        "l_user_name":"User name",
+        "l_user_code":"User code",
+        "l_active":"Active"
+}

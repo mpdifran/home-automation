@@ -4,7 +4,6 @@
     "category": "surveillance",
     "author": "Z-Wave.Me",
     "homepage": "http://razberry.z-wave.me",
-    "state": null,
     "icon": "icon.png",
     "moduleName":"Camera",
     "version": "1.0.0",
@@ -79,7 +78,7 @@
                 "items": {
                     "field": "enum",
                     "datasource": "namespaces",
-                    "enum": "namespaces:devices_doorlock:deviceId,namespaces:devices_switchBinary:deviceId",
+                    "enum": "namespaces:devices_doorlock:deviceId,namespaces:devices_switchBinary:deviceId,namespaces:devices_switchMultilevel:deviceId",
                     "required": false
                 }
             }
@@ -150,7 +149,7 @@
 			        "type": "select",
                         "datasource": "namespaces",
                         "field": "optionLabels",
-                        "optionLabels": "namespaces:devices_doorlock:deviceName,namespaces:devices_switchBinary:deviceName"
+                        "optionLabels": "namespaces:devices_doorlock:deviceName,namespaces:devices_switchBinary:deviceName,namespaces:devices_switchMultilevel:deviceName"
                     }
                 }
             }

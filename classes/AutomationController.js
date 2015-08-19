@@ -44,6 +44,8 @@ function AutomationController() {
     this.lastStructureChangeTime = 0;
 
     this._loadedSingletons = [];
+    
+    this.auth = new AuthController(this);
 }
 
 inherits(AutomationController, EventEmitter2);
@@ -154,17 +156,17 @@ AutomationController.prototype.start = function () {
     ZAutomation = function () {
         return {status: 400, body: "Invalid ZAutomation request"};
     };
-    ws.allowExternalAccess("ZAutomation");
+    ws.allowExternalAccess("ZAutomation", this.auth.ROLE.ANONYMOUS);
 
     // Run webserver
     console.log("Starting automation...");
     ZAutomation.api = new ZAutomationAPIWebRequest(this).handlerFunc();
-    ws.allowExternalAccess("ZAutomation.api");
+    ws.allowExternalAccess("ZAutomation.api", this.auth.ROLE.ANONYMOUS); // there would be additional auth check for each request
 
     // Run storage
     console.log("Starting storage...");
     ZAutomation.storage = new ZAutomationStorageWebRequest(this).handlerFunc();
-    ws.allowExternalAccess("ZAutomation.storage");
+    ws.allowExternalAccess("ZAutomation.storage", this.auth.ROLE.ANONYMOUS); // there would be additional auth check for each request
 
     // Notify core
     this.emit("core.start");
@@ -257,6 +259,7 @@ AutomationController.prototype.loadModuleFromFolder = function (moduleClassName,
     }
 
     moduleMeta.id = moduleClassName;
+    moduleMeta.location = folder + moduleClassName;
 
     // Grab _module and clear it out
     self.modules[moduleClassName] = {

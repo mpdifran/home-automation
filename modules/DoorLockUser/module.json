@@ -1,0 +1,88 @@
+{
+    "singleton": false,
+    "dependencies": [],
+    "category": "devices",
+    "author": "Z-Wave.Me",
+    "homepage": "http://razberry.z-wave.me",
+    "icon": "icon.png",
+    "moduleName": "DoorLockUser",
+    "version": "1.0.0",
+    "maturity": "stable",
+    "repository": {
+        "type": "git",
+        "source": "https://github.com/Z-Wave-Me/home-automation"
+    },
+    "defaults": {
+        "title": "__m_title__",
+        "description": "__m_descr__",
+        "keys": []
+    },
+    "schema": {
+        "type": "object",
+        "properties": {
+            "keys": {
+                "type": "array",
+                "items": {
+                    "$ref": "#/definitions/key"
+                }
+            }
+        },
+        "definitions": {
+            "key": {
+                "type": "object",
+                "properties": {
+                    "deviceType": {
+                        "type": "string",
+                        "enum": ["all", "doorlock_1", "doorlock_2"],
+                        "default": "all",
+                        "required": true
+                    },
+                    "setName": {
+                        "type": "string",
+                        "required": true,
+                        "dependencies": "deviceType"
+                    },
+                    "setCode": {
+                        "type": "string",
+                        "required": true,
+                        "dependencies": "deviceType"
+                    },
+                    "setActive": {
+                        "type": "boolean",
+                        "dependencies": "deviceType"
+                    }
+                }
+            }
+        }
+    },
+    "options": {
+        "fields": {
+            "keys": {
+                "label": "__l_widgets__",
+                "helper": "__h_widgets__"
+            }
+        },
+        "definitions": {
+            "fields": {
+                "key": {
+                    "fields": {
+                        "deviceType": {
+                            "label": "__l_options__",
+                            "type": "select",
+                            "optionLabels": ["All", "Door Lock 1", "Door Lock 2"]
+                        },
+                        "setName": {
+                            "label": "__l_user_name__"
+                        },
+                        "setCode": {
+                            "label": "__l_user_code__"
+                        },
+                        "setActive": {
+                            "rightLabel": "__l_active__"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -70,12 +70,14 @@ Object.defineProperty(ZWave, "list", {
 	writable: false,  
 	configurable: false 
 });
-ws.allowExternalAccess("ZWave.list");
+ws.allowExternalAccess("ZWave.list", controller.auth.ROLE.ADMIN);
 
 ZWave.prototype.init = function (config) {
 	ZWave.super_.prototype.init.call(this, config);
 
 	var self = this;
+
+	this.postfix = this.loadModuleJSON("postfix.json");
 	
 	this.startBinding();
 	if (!this.zway) {
@@ -231,19 +233,19 @@ ZWave.prototype.terminating = function () {
 ZWave.prototype.externalAPIAllow = function (name) {
 	var _name = !!name ? ("ZWave." + name) : "ZWaveAPI";
 
-	ws.allowExternalAccess(_name);
-	ws.allowExternalAccess(_name + ".Run");
-	ws.allowExternalAccess(_name + ".Data");
-	ws.allowExternalAccess(_name + ".InspectQueue");
-	ws.allowExternalAccess(_name + ".Backup");
-	ws.allowExternalAccess(_name + ".Restore");
-	ws.allowExternalAccess(_name + ".CreateZDDX");
-	ws.allowExternalAccess(_name + ".CommunicationStatistics");
-	ws.allowExternalAccess(_name + ".FirmwareUpdate");
-	ws.allowExternalAccess(_name + ".ZMELicense");
-	ws.allowExternalAccess(_name + ".ZMEFirmwareUpgrade");
-	ws.allowExternalAccess(_name + ".ZMEBootloaderUpgrade");
-	// -- see below -- // ws.allowExternalAccess(_name + ".JSONtoXML");
+	ws.allowExternalAccess(_name, this.config.publicAPI ? this.controller.auth.ROLE.ADMIN : this.controller.auth.ROLE.ANONYMOUS);
+	ws.allowExternalAccess(_name + ".Run", this.config.publicAPI ? this.controller.auth.ROLE.ADMIN : this.controller.auth.ROLE.ANONYMOUS);
+	ws.allowExternalAccess(_name + ".Data", this.config.publicAPI ? this.controller.auth.ROLE.ADMIN : this.controller.auth.ROLE.ANONYMOUS);
+	ws.allowExternalAccess(_name + ".InspectQueue", this.config.publicAPI ? this.controller.auth.ROLE.ADMIN : this.controller.auth.ROLE.ANONYMOUS);
+	ws.allowExternalAccess(_name + ".Backup", this.config.publicAPI ? this.controller.auth.ROLE.ADMIN : this.controller.auth.ROLE.ANONYMOUS);
+	ws.allowExternalAccess(_name + ".Restore", this.config.publicAPI ? this.controller.auth.ROLE.ADMIN : this.controller.auth.ROLE.ANONYMOUS);
+	ws.allowExternalAccess(_name + ".CreateZDDX", this.config.publicAPI ? this.controller.auth.ROLE.ADMIN : this.controller.auth.ROLE.ANONYMOUS);
+	ws.allowExternalAccess(_name + ".CommunicationStatistics", this.config.publicAPI ? this.controller.auth.ROLE.ADMIN : this.controller.auth.ROLE.ANONYMOUS);
+	ws.allowExternalAccess(_name + ".FirmwareUpdate", this.config.publicAPI ? this.controller.auth.ROLE.ADMIN : this.controller.auth.ROLE.ANONYMOUS);
+	ws.allowExternalAccess(_name + ".ZMELicense", this.config.publicAPI ? this.controller.auth.ROLE.ADMIN : this.controller.auth.ROLE.ANONYMOUS);
+	ws.allowExternalAccess(_name + ".ZMEFirmwareUpgrade", this.config.publicAPI ? this.controller.auth.ROLE.ADMIN : this.controller.auth.ROLE.ANONYMOUS);
+	ws.allowExternalAccess(_name + ".ZMEBootloaderUpgrade", this.config.publicAPI ? this.controller.auth.ROLE.ADMIN : this.controller.auth.ROLE.ANONYMOUS);
+	// -- see below -- // ws.allowExternalAccess(_name + ".JSONtoXML", this.config.publicAPI ? this.controller.auth.ROLE.ADMIN : this.controller.auth.ROLE.ANONYMOUS);
 };
 
 ZWave.prototype.externalAPIRevoke = function (name) {
@@ -1117,7 +1119,77 @@ ZWave.prototype.gateDevicesStart = function () {
 
 			self.dataBind(self.gateDataBinding, self.zway, nodeId, instanceId, commandClassId, "interviewDone", function(type) {
 				if (this.value === true && type !== self.ZWAY_DATA_CHANGE_TYPE["Deleted"]) {
-					self.parseAddCommandClass(nodeId, instanceId, commandClassId, false);
+
+					var create = true,
+						deviceData = zway.devices[nodeId].data,
+						deviceInstances = zway.devices[nodeId].instances,
+						c = zway.controller,
+						mId = deviceData.manufacturerId.value? deviceData.manufacturerId.value : null,
+						mPT = deviceData.manufacturerProductType.value? deviceData.manufacturerProductType.value : null,
+						mPId = deviceData.manufacturerProductId.value? deviceData.manufacturerProductId.value: null,
+						appMajor = deviceData.applicationMajor.value? deviceData.applicationMajor.value: null,
+						appMinor = deviceData.applicationMinor.value? deviceData.applicationMinor.value: null,
+						devId,postFix;					
+					
+					// try to get fix by manufacturerProductId and application Version
+					if(!!mId && !!mPT && !!mPId && !!self.postfix) {
+
+						devId = mId + '.' + mPT + '.' + mPId,
+						appMajorId = devId + '.' + appMajor,
+						appMinorId = devId + '.' + appMinor,
+						postFix = self.postfix.filter(function(device){
+							return 	device.id === devId || 		//search by manufacturerProductId
+									device.id === appMajorId || //search by applicationMajor
+									device.id === appMinorId; 	//search by applicationMinor
+						});
+					}
+
+					if(postFix) {
+						if(postFix.length > 0){
+							try {
+								// works of course only during inclusion - after restart hidden elements are visible again
+								if(!!nodeId && c.data.lastIncludedDevice.value === nodeId){
+									var intDone = deviceInstances[instanceId].commandClasses[commandClassId].data.interviewDone.value;
+								    	intDelay = (new Date()).valueOf() + 5*1000; // wait not more than 5 seconds for single interview
+
+									// wait till interview is done
+									while ((new Date()).valueOf() < intDelay &&  intDone === false) {
+										intDone = deviceInstances[instanceId].commandClasses[commandClassId].data.interviewDone.value;
+									}
+									
+									if (intDone === false) {
+										try {
+											// call preInteview functions from postfix.json
+											postFix.forEach(function(fix){
+												if(!!fix.preInterview && fix.preInterview && fix.preInterview.length > 0){
+													fix.preInterview.forEach(function(func){
+														eval(func);
+													});
+												}
+											});
+										}catch(e){
+											console.log("##---INTERVIEW-HAS-FAILED-----PREFIX-HAS-FAILED---##", e);
+										}
+									}
+								}
+																
+								// call postInterview functions from postfix.json
+								postFix.forEach(function(fix){
+									if(!!fix.postInterview && fix.postInterview && fix.postInterview.length > 0){
+										fix.postInterview.forEach(function(func){
+											eval(func);
+										});
+									}
+								});
+							}catch(e){
+								console.log("#### --- PRE-OR-POSTFIX-ERROR:", e);
+							}
+						}
+					}
+
+					if(create){
+						self.parseAddCommandClass(nodeId, instanceId, commandClassId, false);
+					}
 				} else {
 					self.parseDelCommandClass(nodeId, instanceId, commandClassId, false);
 				}
@@ -1311,7 +1383,12 @@ ZWave.prototype.parseAddCommandClass = function (nodeId, instanceId, commandClas
 			});
 
 			if (vDev) {
-				self.dataBind(self.gateDataBinding, self.zway, nodeId, instanceId, commandClassId, "level", function() {
+				self.dataBind(self.gateDataBinding, self.zway, nodeId, instanceId, commandClassId, "level", function(type, arg) {
+				        if (!(type & self.ZWAY_DATA_CHANGE_TYPE["PhantomUpdate"]) && this.updateTime > this.invalidateTime) {
+				                setTimeout(function () {
+				                        self.zway.devices[nodeId].instances[instanceId].commandClasses[commandClassId].Get();
+                                                }, 1000);
+				        }
 					try {
 						vDev.set("metrics:level", this.value);
 					} catch (e) {}
@@ -1660,7 +1737,7 @@ ZWave.prototype.parseAddCommandClass = function (nodeId, instanceId, commandClas
 			if (vDev) {
 				self.dataBind(self.gateDataBinding, self.zway, nodeId, instanceId, commandClassId, "last", function() {
 					try {
-						vDev.set("metrics:level", this.value);
+						vDev.set("metrics:level", this.value === 255 ? 0 : this.value);
 					} catch (e) {}
 				}, "value");
 			}
