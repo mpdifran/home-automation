@@ -17,5 +17,7 @@
 	"err_binding_start":"Невозможно запустить Z-Wave движок: ",
 	"err_connct":"Соединение потеряно с Z-Wave устройством ID: ",
 	"dev_btl":"Z-Wave устройство ID снова доступно: ",
-	"err_dev_create":"Не возможно создать vDev основанное на: "
+	"err_dev_create":"Не возможно создать vDev основанное на: ",
+	"err_parse":"Cannot parse blacklist information.",
+	"err_fetch":"Cannot fetch blacklist information."
 }

@@ -17,5 +17,7 @@
 	"err_binding_start":"Cannot start Z-Wave binding: ",
 	"err_connct":"Connection lost to Z-Wave device ID: ",
 	"dev_btl":"Z-Wave device ID is back to life: ",
-	"err_dev_create":"Cannot create vDev based on: "
+	"err_dev_create":"Cannot create vDev based on: ",
+	"err_parse":"Cannot parse blacklist information.",
+	"err_fetch":"Cannot fetch blacklist information."
 }

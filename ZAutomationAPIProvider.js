@@ -97,6 +97,8 @@ _.extend(ZAutomationAPIWebRequest.prototype, {
         this.router.get("/backup", this.ROLE.ADMIN, this.backup);
         this.router.post("/restore", this.ROLE.ADMIN, this.restore);
         this.router.post("/reset", this.ROLE.ADMIN, this.reset);
+
+        this.router.get("/blacklist", this.ROLE.USER, this.checkBlacklist);
     },
 
     // !!! Do we need it?
@@ -1257,6 +1259,51 @@ _.extend(ZAutomationAPIWebRequest.prototype, {
             reply.error = e.toString();
         }
         
+        return reply;
+    },
+    checkBlacklist: function(){
+         var reply = {
+                error: null,
+                data: null,
+                code: 500
+            };
+
+        this.getEntries = function(entries){
+            reply.code = 200;
+            reply.data = {
+                    entryOnBlacklist: entries[0]
+                };
+            
+            //remove listener
+            this.controller.off('ZWave.blacklistEntry', this.getEntries);
+            
+            console.log('#####---API-BL-ENTRY-DETECTED---#####');
+        };
+
+        try {
+            this.controller.on('ZWave.blacklistEntry', this.getEntries);
+
+            var d = (new Date()).valueOf() + 30000; // wait not more than 20 seconds
+            
+            while ((new Date()).valueOf() < d && reply.data === null) {
+                processPendingCallbacks();
+            }
+            
+            if (reply.data === null) {
+                
+                reply.code = 200;
+                reply.data = {
+                    entryOnBlacklist: false
+                };
+
+                //remove listener
+                this.controller.off('ZWave.blacklistEntry', this.getEntries);
+                console.log('#####---API-NO-BL-ENTRY---#####');
+            }
+        } catch (e) {
+            reply.error = e.toString();
+        }
+
         return reply;
     }
 });

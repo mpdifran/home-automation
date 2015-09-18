@@ -77,6 +77,7 @@ ZWave.prototype.init = function (config) {
 
 	var self = this;
 
+	//load postfixes
 	this.postfix = this.loadModuleJSON("postfix.json");
 	
 	this.startBinding();
@@ -1120,7 +1121,11 @@ ZWave.prototype.deadDetectionCheckDevice = function (self, nodeId) {
 
 ZWave.prototype.gateDevicesStart = function () {
 
-	var self = this;
+	var self = this,
+		lastDevId,
+		lastMajorId,
+		lastMinorId,
+		devInBlacklist;
 
 	this.gateDataBinding = [];
 
@@ -1159,6 +1164,58 @@ ZWave.prototype.gateDevicesStart = function () {
 									device.id === appMajorId || //search by applicationMajor
 									device.id === appMinorId; 	//search by applicationMinor
 						});
+
+						if (!!nodeId && c.data.lastIncludedDevice.value === nodeId) {
+							var moduleName = "ZWave",
+								langFile = self.controller.loadModuleLang(moduleName);
+
+							// do request only once during inclusion
+							if (lastDevId !== devId || lastMajorId !== appMajorId || lastMinorId !== appMinorId) {
+								devInBlacklist = undefined;
+							}
+
+							if (!devInBlacklist) {
+								//try to find out if device is on blacklist
+								http.request({
+			                        url: 'http://hrix.net/devices/blacklist.json',
+			                        async: true,
+			                        success: function(res) {
+			                        	//console.log('response device_id:', JSON.stringify(res.data[0].device_id));
+		            					try {
+		            								            						
+	            							devInBlacklist = res.data.filter(function (entry) {
+	            								//console.log('entry:', JSON.stringify(entry));
+	            								//console.log('entry.device_id:',entry.device_id,'|| devId:',devId.toString(),'|| appMajorId:', appMajorId.toString(),'|| appMinorId', appMinorId.toString());
+		            							return 	entry.device_id === devId || 		//search by manufacturerProductId
+														entry.device_id === appMajorId || 	//search by applicationMajor
+														entry.device_id === appMinorId; 	//search by applicationMinor 
+		            						});
+
+		            						//console.log('devInBlacklist:',JSON.stringify(devInBlacklist));       						
+
+		            						if (devInBlacklist.length > 0) {
+		            							self.controller.emit("ZWave.blacklistEntry", devInBlacklist);
+		            							console.log('#####---SEND-BL-EMIT---#####')
+		            						} else {
+		            							self.controller.emit("ZWave.blacklistEntry", false);
+		            							console.log('#####---SEND-BL-EMIT-FALSE---#####')
+		            						}
+
+		            					} catch (e) {
+							                self.controller.addNotification("error", langFile.err_parse, "module", moduleName);
+							            }
+							        },
+							        error: function() {
+							            self.controller.addNotification("error", langFile.err_fetch, "module", moduleName);
+							        }
+			                    });
+							}
+							
+							// replace old id's
+							lastDevId = !lastDevId || lastDevId !== devId? devId : lastDevId;
+							lastMajorId = !lastMajorId || lastMajorId !== appMajorId? appMajorId : lastMajorId;
+							lastMinorId = !lastMinorId || lastMinorId !== appMinorId? appMinorId : lastMinorId;
+						}
 					}
 
 					if (postFix) {

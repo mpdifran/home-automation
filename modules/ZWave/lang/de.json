@@ -17,5 +17,7 @@
 	"err_binding_start":"Fehler beim Starten der Z-Wave Bindung: ",
 	"err_connct":"Verbindung verloren zur Z-Wave Geräte-ID: ",
 	"dev_btl":"Z-Wave Geräte-ID ist wieder verbunden: ",
-	"err_dev_create":"vDev konnte mit den folgenden Daten nicht erstellt werden: "
+	"err_dev_create":"vDev konnte mit den folgenden Daten nicht erstellt werden: ",
+	"err_parse":"Fehler beim Einlesen der Blacklist.",
+	"err_fetch":"Fehler beim Abrufen der Blacklist."
 }
