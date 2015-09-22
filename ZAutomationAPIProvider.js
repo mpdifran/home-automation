@@ -1262,7 +1262,8 @@ _.extend(ZAutomationAPIWebRequest.prototype, {
         return reply;
     },
     checkBlacklist: function(){
-         var reply = {
+        var self = this,
+            reply = {
                 error: null,
                 data: null,
                 code: 500
@@ -1270,20 +1271,26 @@ _.extend(ZAutomationAPIWebRequest.prototype, {
 
         this.getEntries = function(entries){
             reply.code = 200;
-            reply.data = {
+            if (entries) {
+                reply.data = {
                     entryOnBlacklist: entries[0]
                 };
+            } else {
+                reply.data = {
+                    entryOnBlacklist: false
+                };
+            }
             
             //remove listener
-            this.controller.off('ZWave.blacklistEntry', this.getEntries);
+            self.controller.off('ZWave.blacklistEntry', self.getEntries);
             
-            console.log('#####---API-BL-ENTRY-DETECTED---#####');
+            console.log('#####---API-BLACK-LIST-ENTRY-DETECTED---#####');
         };
 
         try {
-            this.controller.on('ZWave.blacklistEntry', this.getEntries);
+            self.controller.on('ZWave.blacklistEntry', self.getEntries);
 
-            var d = (new Date()).valueOf() + 30000; // wait not more than 20 seconds
+            var d = (new Date()).valueOf() + 20000; // wait not more than 20 seconds
             
             while ((new Date()).valueOf() < d && reply.data === null) {
                 processPendingCallbacks();
@@ -1297,8 +1304,8 @@ _.extend(ZAutomationAPIWebRequest.prototype, {
                 };
 
                 //remove listener
-                this.controller.off('ZWave.blacklistEntry', this.getEntries);
-                console.log('#####---API-NO-BL-ENTRY---#####');
+                self.controller.off('ZWave.blacklistEntry', self.getEntries);
+                console.log('#####---API-NO-BLACK-LIST-ENTRY---#####');
             }
         } catch (e) {
             reply.error = e.toString();

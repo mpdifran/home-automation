@@ -1125,6 +1125,7 @@ ZWave.prototype.gateDevicesStart = function () {
 		lastDevId,
 		lastMajorId,
 		lastMinorId,
+		lastIncludedNodeId,
 		devInBlacklist;
 
 	this.gateDataBinding = [];
@@ -1151,7 +1152,9 @@ ZWave.prototype.gateDevicesStart = function () {
 						appMajor = deviceData.applicationMajor.value? deviceData.applicationMajor.value: null,
 						appMinor = deviceData.applicationMinor.value? deviceData.applicationMinor.value: null,
 						devId,
-						postFix;					
+						postFix;
+
+
 					
 					// try to get fix by manufacturerProductId and application Version
 					if (!!mId && !!mPT && !!mPId && !!self.postfix) {
@@ -1165,53 +1168,54 @@ ZWave.prototype.gateDevicesStart = function () {
 									device.id === appMinorId; 	//search by applicationMinor
 						});
 
+						// try to proof if device is listed in black list
 						if (!!nodeId && c.data.lastIncludedDevice.value === nodeId) {
 							var moduleName = "ZWave",
 								langFile = self.controller.loadModuleLang(moduleName);
 
 							// do request only once during inclusion
-							if (lastDevId !== devId || lastMajorId !== appMajorId || lastMinorId !== appMinorId) {
+							if (lastDevId !== devId || lastMajorId !== appMajorId || lastMinorId !== appMinorId || nodeId !== lastIncludedNodeId) {
 								devInBlacklist = undefined;
 							}
 
-							if (!devInBlacklist) {
+							if (!devInBlacklist && nodeId !== lastIncludedNodeId) {
 								//try to find out if device is on blacklist
 								http.request({
 			                        url: 'http://hrix.net/devices/blacklist.json',
 			                        async: true,
 			                        success: function(res) {
-			                        	//console.log('response device_id:', JSON.stringify(res.data[0].device_id));
-		            					try {
-		            								            						
+			                        	try {
+		            						
+		            						//filter for entries in blacklist		            						
 	            							devInBlacklist = res.data.filter(function (entry) {
-	            								//console.log('entry:', JSON.stringify(entry));
-	            								//console.log('entry.device_id:',entry.device_id,'|| devId:',devId.toString(),'|| appMajorId:', appMajorId.toString(),'|| appMinorId', appMinorId.toString());
-		            							return 	entry.device_id === devId || 		//search by manufacturerProductId
+	            								return 	entry.device_id === devId || 		//search by manufacturerProductId
 														entry.device_id === appMajorId || 	//search by applicationMajor
 														entry.device_id === appMinorId; 	//search by applicationMinor 
-		            						});
+		            						});       						
 
-		            						//console.log('devInBlacklist:',JSON.stringify(devInBlacklist));       						
-
+	            							// emit events
 		            						if (devInBlacklist.length > 0) {
 		            							self.controller.emit("ZWave.blacklistEntry", devInBlacklist);
-		            							console.log('#####---SEND-BL-EMIT---#####')
+		            							console.log('#####---SEND-BLACK-LIST-EMIT---#####');
 		            						} else {
 		            							self.controller.emit("ZWave.blacklistEntry", false);
-		            							console.log('#####---SEND-BL-EMIT-FALSE---#####')
+		            							console.log('#####---SEND-BLACK-LIST-EMIT-FALSE---#####');
 		            						}
 
 		            					} catch (e) {
 							                self.controller.addNotification("error", langFile.err_parse, "module", moduleName);
+							                self.controller.emit("ZWave.blacklistEntry", false);
 							            }
 							        },
 							        error: function() {
 							            self.controller.addNotification("error", langFile.err_fetch, "module", moduleName);
+							            self.controller.emit("ZWave.blacklistEntry", false);
 							        }
 			                    });
 							}
 							
 							// replace old id's
+							lastIncludedNodeId = nodeId !== lastIncludedNodeId? nodeId : lastIncludedNodeId;
 							lastDevId = !lastDevId || lastDevId !== devId? devId : lastDevId;
 							lastMajorId = !lastMajorId || lastMajorId !== appMajorId? appMajorId : lastMajorId;
 							lastMinorId = !lastMinorId || lastMinorId !== appMinorId? appMinorId : lastMinorId;
@@ -1281,7 +1285,7 @@ ZWave.prototype.gateDevicesStart = function () {
                         self.controller.devices.remove(name);
         		self.controller.devices.cleanup(name);
                 });
-	}, "");	
+	}, "");		
 };
 
 ZWave.prototype.gateDevicesStop = function () {
