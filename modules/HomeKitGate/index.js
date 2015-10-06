@@ -24,6 +24,9 @@ inherits(HomeKitGate, AutomationModule);
 
 _module = HomeKitGate;
 
+// temporary hack until modhomekit updated
+HomeKit.Services.Battery = "96";
+
 // ----------------------------------------------------------------------------
 // --- Module instance initialized
 // ----------------------------------------------------------------------------
@@ -66,6 +69,7 @@ HomeKitGate.prototype.init = function (config) {
         	}, this);
         	return { characteristics: values };
         } else if (r.path == "/identify") {
+        	console.log("HomeKit PIN:", this.pin);
         	that.controller.addNotification("info", "HomeKit PIN: " + this.pin, "module", "HomeKit");
         }
     });
@@ -429,9 +433,18 @@ HomeKitGate.prototype.init = function (config) {
 		else if (deviceType == "battery") {
 			var service = accessory.addService(HomeKit.Services.Battery, "Battery");
 			
-			m.level = service.addCharacteristic(HomeKit.Characteristics.BatteryLevel, "int", {
-				get: function() { return parseInt(vDev.get("metrics:level")); }
-			}, { unit: "percentage", minValue: 0, maxValue: 100 });
+			m.level = [
+				service.addCharacteristic(HomeKit.Characteristics.BatteryLevel, "int", {
+					get: function() { return parseInt(vDev.get("metrics:level")); }
+				}, { unit: "percentage", minValue: 0, maxValue: 100 }),
+
+				service.addCharacteristic(HomeKit.Characteristics.StatusLowBattery, "bool", {
+					get: function() { return parseInt(vDev.get("metrics:level")) < 10; }	
+				})
+			];
+
+			// constant characteristic, just required by HomeKit
+			service.addCharacteristic(HomeKit.Characteristics.ChargingState, "bool", false, [ "pr" ]);
 		}
 		// todo
 	}
