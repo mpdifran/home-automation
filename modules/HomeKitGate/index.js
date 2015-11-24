@@ -38,6 +38,7 @@ HomeKitGate.prototype.init = function (config) {
     var that = this;
 
     this.hk = new HomeKit(this.config.name, function(r) {
+        console.log("Method: %s Path: %s", r.method, r.path);
         if (r.method == "GET" && r.path == "/accessories") {
         	return this.accessories.serialize(r);
         } else if (r.method == "PUT" && r.path == "/characteristics" && r.data && r.data.characteristics) {
@@ -522,6 +523,8 @@ HomeKitGate.prototype.init = function (config) {
 
 HomeKitGate.prototype.stop = function () {
     HomeKitGate.super_.prototype.stop.call(this);
+
+    console.log("Calling stop for some stupid reason.");
 
 	this.controller.devices.off("created", this.onDeviceAdded);
 	this.controller.devices.off("removed", this.onDeviceRemoved);
