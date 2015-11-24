@@ -364,17 +364,18 @@ HomeKitGate.prototype.init = function (config) {
 		}
 		else if (deviceType == "switchMultilevel") {
 			var service = accessory.addService(HomeKit.Services.Lightbulb, serviceName);
-			
+            var dimmerService = accessory.addService("1004", serviceName + " Dimmer");
+
 			m.level = [ 
 				service.addCharacteristic(HomeKit.Characteristics.PowerState, "bool", {
 					get: function() { return parseInt(vDev.get("metrics:level")) > 0; },
 					set: function(value) { vDev.performCommand(value ? "on" : "off"); }
 				}),
 
-				service.addCharacteristic(HomeKit.Characteristics.Brightness, "int", {
-					get: function() { return Math.min(parseInt(vDev.get("metrics:level")) || 0, 100); },
-					set: function(value) { vDev.performCommand("exact", { level: value }); }
-				}, { unit: "percentage", minValue: 0, maxValue: 100, minStep: 1 })
+                dimmerService.addCharacteristic(HomeKit.Characteristics.Brightness, "float", {
+                    get: function() { return parseFloat(vDev.get("metrics:level")) || 0.0; },
+                    set: function(value) { vDev.performCommand("exact", { level: value }); }
+                })
 			];
 		}
 		else if (deviceType == "switchRGBW") {
